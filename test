@@ -1,0 +1,103 @@
+#include <Adafruit_GFX.h>    
+#include <Adafruit_ST7789.h> 
+#include <SPI.h>
+
+// --- PINS (Software SPI) ---
+#define TFT_CS        10
+#define TFT_RST       8 
+#define TFT_DC        7
+#define TFT_MOSI      11 
+#define TFT_SCLK      13 
+#define TFT_BL        9   
+
+// Initialize Library
+Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_MOSI, TFT_SCLK, TFT_RST);
+
+// --- FACE SETTINGS ---
+int centerX, centerY;
+int eyeSpacing = 60;      // Increased spacing (was 45)
+int eyeWidth = 40;
+int eyeHeight = 90;
+int eyeRadius = 20;       // Rounded ends
+
+void setup() {
+  Serial.begin(9600);
+
+  // 1. Turn on Backlight
+  pinMode(TFT_BL, OUTPUT);
+  digitalWrite(TFT_BL, HIGH); 
+
+  // 2. Initialize
+  tft.init(240, 320); 
+  tft.setRotation(1); 
+  
+  // 3. Clear Screen ONCE
+  // This is the slow part, but we only do it one time.
+  tft.fillScreen(ST77XX_BLACK);
+  
+  // 4. Setup Coordinates
+  centerX = tft.width() / 2;
+  centerY = tft.height() / 2;
+
+  // 5. Draw the Mouth (Static - doesn't move)
+  drawCrescentMouth();
+}
+
+void loop() {
+  // --- BLINKING ANIMATION ---
+  
+  // 1. Eyes Open
+  drawEyes(true);
+  
+  // 2. Wait for a random time (2 to 4 seconds)
+  delay(random(2000, 4000));
+  
+  // 3. Eyes Closed (Blink)
+  drawEyes(false);
+  
+  // 4. Keep closed for short time (150ms)
+  delay(150);
+}
+
+// Function to draw the Crescent Mouth
+void drawCrescentMouth() {
+  int mouthY = centerY + 35; 
+  int mouthRadius = 20;     // Bigger mouth
+  int curveHeight = 6;      // Controls how "thick" the crescent is
+
+  // Step 1: Draw the main white circle (The full lip)
+  tft.fillCircle(centerX, mouthY, mouthRadius, ST77XX_WHITE);
+
+  // Step 2: Draw a BLACK circle slightly higher to "cut out" the top
+  // This creates the crescent moon shape
+  tft.fillCircle(centerX, mouthY - curveHeight, mouthRadius, ST77XX_BLACK);
+}
+
+// Function to draw Eyes (Open or Closed)
+void drawEyes(bool isOpen) {
+  int leftEyeX = centerX - eyeSpacing - (eyeWidth/2);
+  int rightEyeX = centerX + eyeSpacing - (eyeWidth/2);
+  int eyeTopY = centerY - 45;
+
+  if (isOpen) {
+    // --- DRAW OPEN EYES ---
+    // We assume the background is black, so drawing white ovals works.
+    tft.fillRoundRect(leftEyeX, eyeTopY, eyeWidth, eyeHeight, eyeRadius, ST77XX_WHITE);
+    tft.fillRoundRect(rightEyeX, eyeTopY, eyeWidth, eyeHeight, eyeRadius, ST77XX_WHITE);
+  } else {
+    // --- DRAW CLOSED EYES (BLINK) ---
+    
+    // 1. Erase the open eyes (Cover with Black)
+    // We make the black box slightly larger to ensure no white pixels remain
+    tft.fillRect(leftEyeX, eyeTopY, eyeWidth, eyeHeight, ST77XX_BLACK);
+    tft.fillRect(rightEyeX, eyeTopY, eyeWidth, eyeHeight, ST77XX_BLACK);
+
+    // 2. Draw the "Closed" line (Eyelid)
+    // Draw a thick horizontal line where the middle of the eye was
+    int blinkY = centerY; 
+    int blinkHeight = 4; // Thickness of blink line
+    
+    tft.fillRect(leftEyeX, blinkY, eyeWidth, blinkHeight, ST77XX_WHITE);
+    tft.fillRect(rightEyeX, blinkY, eyeWidth, blinkHeight, ST77XX_WHITE);
+  }
+}
