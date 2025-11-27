@@ -1,0 +1,68 @@
+#include <Servo.h>
+
+Servo armServo;  // Create servo object for the arm
+
+const int photocellPin = A0;  // Photocell on analog pin A0
+const int servoPin = 2;       // Servo on pin 2
+
+int lightLevel = 0;           // Current light reading
+int baselineLight = 0;        // Normal light level
+int threshold = 15;           // Adjusted for your sensor (28 - 7 = 21, using 15 for safety)
+bool hasWaved = false;        // Prevent repeated waves
+
+void setup() {
+  armServo.attach(servoPin);
+  armServo.write(90);  // Start at neutral position
+  
+  Serial.begin(9600);
+  
+  // Calibrate baseline light level
+  delay(1000);
+  baselineLight = analogRead(photocellPin);
+  Serial.print("Baseline light: ");
+  Serial.println(baselineLight);
+  Serial.println("Wave your hand to trigger!");
+}
+
+void loop() {
+  lightLevel = analogRead(photocellPin);
+  
+  // Print light level for debugging
+  Serial.print("Light: ");
+  Serial.println(lightLevel);
+  
+  // Detect if hand creates shadow (light drops significantly)
+  if (lightLevel < (baselineLight - threshold) && !hasWaved) {
+    Serial.println("Wave detected! Waving back...");
+    doWave();
+    hasWaved = true;  // Prevent immediate re-trigger
+  }
+  
+  // Reset when hand is removed (light returns to normal)
+  if (lightLevel > (baselineLight - threshold/2)) {
+    hasWaved = false;
+  }
+  
+  delay(50);  // Short delay between readings
+}
+
+void doWave() {
+  // Wave motion: sweep arm back and forth 3 times
+  for (int i = 0; i < 3; i++) {
+    // Wave forward
+    for (int pos = 90; pos <= 150; pos += 5) {
+      armServo.write(pos);
+      delay(10);
+    }
+    
+    // Wave back
+    for (int pos = 150; pos >= 90; pos -= 5) {
+      armServo.write(pos);
+      delay(10);
+    }
+  }
+  
+  // Return to neutral position
+  armServo.write(90);
+  Serial.println("Wave complete!");
+}
